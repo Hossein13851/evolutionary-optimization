@@ -11,21 +11,19 @@ The initial implementation of this project was written during my second undergra
 This repository focuses on implementing foundational evolutionary optimization algorithms from scratch. For algorithm variants and extensions that already have mature open-source implementations, the emphasis is on understanding, evaluation, and research rather than reimplementing existing software.
 
 ## Implemented Algorithms
-
-- [ ] Genetic Algorithm (GA)
-- [x] Differential Evolution (DE)
-- [x] NSGA-III
+- [x] Differential Evolution (DE)(Initial implementation)
+- [x] NSGA-III (Initial implementation)
 
 ## Planned Algorithms
-
+- [ ] Refactor Differential Evolution (DE)
+- [ ] Refactor NSGA-III 
+- [ ] MOEA/D
 - [ ] HFiDEA (localized high fidelity dominance based EA)
 
 ## Features
 
 - PyTorch and NumPy implementations
-- Modular and extensible codebase
 - Research-oriented implementations
-- Reproducible experiments
 
 ## Future Work
 

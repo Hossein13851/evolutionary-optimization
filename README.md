@@ -15,7 +15,7 @@ This repository focuses on implementing foundational evolutionary optimization a
 - [x] NSGA-III (Initial implementation)
 
 ## Planned Algorithms
-- [ ] Refactor Differential Evolution (DE)
+- [x] Refactor Differential Evolution (DE)
 - [ ] Refactor NSGA-III 
 - [ ] MOEA/D
 - [ ] HFiDEA (localized high fidelity dominance based EA)

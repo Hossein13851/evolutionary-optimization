@@ -102,43 +102,44 @@ def crossOver(x1,x2,CR):
             beta = (1 / (2 * (1 - u))) ** (1 / (Nc + 1))
         i = 0
         arr = []
+        child1 = []
+        child2 = []
         while i <len(x1):
             y1 = 0.5 * (((1 + beta) * x1[i]) + ((1 - beta) * x2[i]))
             y2 = 0.5 * (((1 - beta) * x1[i]) + ((1 + beta) * x2[i]))
-            arr.append(y1)
-            arr.append(y2)
+            child1.append(y1)
+            child2.append(y2)
             i = i + 1
-
-            
+        arr.append(child1)
+        arr.append(child2)
+        
     
     return arr
 
-import math
+
 
 def associate(S, k, Ps, sl2, referencePo):
     
     p = [0] * len(referencePo)
-    
     i = 0
     while i < len(S) - len(sl2):
         t = []
         s = S[i] 
-        for ref in referencePo:  
-            
+        for ref in referencePo: 
             dot = sum(s[j] * ref[j] for j in range(len(s)))
             ref_norm_sq = sum(ref[j] * ref[j] for j in range(len(ref)))
             if ref_norm_sq == 0:
+                t.append(10000000000)
                 continue
             factor = dot / ref_norm_sq
             proj = [factor * ref[j] for j in range(len(ref))]
             dist = math.sqrt(sum((s[j] - proj[j]) ** 2 for j in range(len(s))))
             t.append(dist)
-        
-       
+
         min_val = t[0]
         m = 0
-        for j in range(1, len(t)):
-            if t[j] < min_val:
+        for j in range(1, len(t)) :
+            if t[j] < min_val :
                 min_val = t[j]
                 m = j
         p[m] += 1
@@ -146,12 +147,105 @@ def associate(S, k, Ps, sl2, referencePo):
     
     return p  
 
-def Niching(p,k,sl):
-    pass
 
+def Niching(p,k,lastFrontS,ref):
+    i = 0
+    selectedS = []
+    while i < k:
+        q = 1000000
+        j = 0
+        while j < len(p) :
+            if q > p[j] and sum(ref[j][l] * ref[j][l] for l in range(len(ref[0]))) != 0:
+                q = p[j]
+                o = j
+            j = j + 1
+        j = 0
+        flag = 1
+        min = 0
+        while j < len(lastFrontS):
+            dot = sum(lastFrontS[j][l] * ref[o][l] for l in range(len(lastFrontS[0])))
+            ref_norm_sq = sum(ref[o][l] * ref[o][l] for l in range(len(ref[0])))
+            factor = dot / ref_norm_sq
+            proj = [factor * ref[o][l] for l in range(len(ref[0]))]
+            dist = math.sqrt(sum((lastFrontS[j][l] - proj[l]) ** 2 for l in range(len(lastFrontS[0]))))
+            if dist < min or flag ==1:
+                flag = 0
+                min = dist
+                f = j        
+            j = j + 1
+        
+        selectedS.append(lastFrontS[f])
+        lastFrontS.pop(f)
+        p[o] = p[o] + 1
+        i = i + 1 
 
-
+    return selectedS 
+    
 
 
 def NSGAIII(pop,numOfIteration,referencePo):
+    #print("number of iteration:  ")
+    numInput = int(input("number of iteration:  "))
+    n = 0
+    while n < numInput:
+
+        i = 0
+        Q = []
+        while i < len(pop):
+            ran1 = random.randint(0,len(pop) - 1)
+            ran2 = random.randint(0,len(pop) - 1)
+            ran3 = random.randint(0,len(pop) - 1)
+            children = (pop[ran1],pop[ran2]).copy()
+            
+            if len(children) != 0 :
+                child1 = children[0]
+                child2 = children[1]
+                Q.append(child1)
+                Q.append(child2)
+                i = i + 2
+
+            child = mutation(pop)
+            if len(child) !=0 :
+                Q.append(child)
+                i = i + 1
+
+
+        Rt = []
+        Rt.extend(pop)
+        Rt.extend(Q)
+        x = objectiveFunction(Rt)
+        front = sortFront(x,Rt)
+        i = 0 
+        j = 0
+        St = [] 
+        #print(3)
+        while len(St) < len(pop):
+            j = 0
+            while j < len(front[i]):
+                St.append(front[i][j])
+                j = j + 1 
+            i = i + 1
+        lastF = i - 1
+        pop = []
+        if len(St) == len(pop):
+            pop = St.copy()
+        else:
+            i = 0
+            while i < len(St) - len(front[lastF]):
+                pop.append(St[i])
+                i = i + 1
+            
+            K = len(pop) - len(pop)
+            Fl = front[lastF]
+            St1 = normalization.normalize(St).copy() 
+
+            P1 = associate(St1,K,pop,Fl)
+            pop = P1.copy()
+
+        print(numInput)
+        n =  n + 1
+
+
+    return pop
+
     pass

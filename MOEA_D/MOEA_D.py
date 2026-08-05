@@ -3,11 +3,12 @@ import numpy as np
 import random
 
 class wVectorn:
-    def __init__(self,wVector1,solution,PBIS):
+    def __init__(self,wVector1,solution,PBIS,decietionV):
         self.wVector1 = wVector1
         self.solution = solution
         self.neighbors = []
         self.PBIS = PBIS
+        self.decietionValue = decietionV
 
     def setSolution(self,solution):
         self.solution = solution
@@ -24,24 +25,18 @@ def generatePop():
     pass 
 
 #polynomial mutation  
-def mutation(x,lb,ub):
+def mutation(x, lb, ub, MR=0.1, nm=15):
 
-
-    n = x.copy()
-    delta = 0
-    nm = 15
-    child = []
-    
-    u = random.random()
-    if u <= 0.5:
-        delta = (2*u) ** (1 / (nm + 1))
-    else :
-        delta = 1 - ((2*(1-u)) ** (1 / (1 + nm) ))
-    i = 0
-    while(i<len(n)):
-        n[i] += delta * (ub - lb)
-        child = n
-
+    child = x.copy()
+    for i in range(len(child)):
+        if np.random.rand() < MR:          
+            u = np.random.rand()
+            if u <= 0.5:
+                delta = (2 * u) ** (1 / (nm + 1)) - 1   
+            else:
+                delta = 1 - (2 * (1 - u)) ** (1 / (nm + 1))
+            child[i] += delta * (ub[i] - lb[i])
+            child[i] = np.clip(child[i], lb[i], ub[i]) 
     return child
 
 def arithmeticCrossover(parent1, parent2, alpha=None):
@@ -77,13 +72,18 @@ def PBI(wVector,idealP,solution, theta):
 def dominanceCheck(a,b):
     return np.all(a >= b) and np.any(a > b) 
 
-def nonDomnanceSet(pop):
-    for i in  range(len(pop)):
-        for j in range(len(pop)):
-            if i != j  and dominanceCheck(pop[j],pop[i]):
+def nonDomnanceSet(popValue,pop):
+    EP = []
+    for i in  range(len(popValue)):
+        li = []
+        
+        for j in range(len(popValue)):
+            if i != j  and dominanceCheck(popValue[j],popValue[i]):
                 break
-            elif j == (len(pop) -1 ) :
-                EP = np.append(EP , pop[i]) 
+            elif j == (len(popValue) -1 ) :
+                li.append(pop[i])
+                li.append(popValue[i])
+                EP.append(li) 
     return EP
 
 
@@ -94,10 +94,9 @@ def findneighbors(wVectors,numNeighbors):
         distanceV = []
         j = 0 
         while j < len(wVectors):
-            x = np.dot(wVectors[i].wVector1,wVectors[j].wVector1)
-            y =math.sqrt(np.dot(wVectors[j].wVector1,wVectors[j].wVector1))
-            v =((x / y) * (wVectors[j].wVector1 / y)) - wVectors[i].wVector1
-            dist = math.sqrt(abs(np.dot(v,v))) 
+            x = wVectors[i].wVector1 - wVectors[j].wVector1
+            y = np.linalg.norm(x)
+            dist = y
             distanceV.append(dist)
             j += 1
         
@@ -105,10 +104,9 @@ def findneighbors(wVectors,numNeighbors):
         while (k < numNeighbors):
             n = 0
             min = float('inf')
-            flag = True
             j = 0
             while j < len(distanceV):
-                if distanceV[j] < min or flag:
+                if distanceV[j] < min: 
                     min = distanceV[j]
                     n = j
                     flag = False
@@ -118,40 +116,25 @@ def findneighbors(wVectors,numNeighbors):
             distanceV.pop(n)
 
             k += 1
-
-        
         i += 1
 
 
-def findIdealPoint(EP):
-    i = 0
-    z = [0] * len(EP[0])
-    flag = True
-    while i < len(EP):
-        j = 0
-        while j < len(EP[0]):
-            if EP[i][j] > z[j] or flag:
-                z[j] = EP[i][j]
-            j += 1
 
+def findIdealPoint(pop):
+    i = 0
+    z = pop[0].copy()
+    while i < len(pop):
+        j = 0
+        while j < len(pop[0]):
+            if pop[i][j] > z[j] :
+                z[j] = pop[i][j]
+            j += 1
         i += 1
     return z
 
 
 
-def updateSolution(wVector,solution):
-    i = 0
-    if dominanceCheck(solution , wVector.solution ):
-        wVector.solution = solution
-    else :
-        while i < len(wVector.neighbors):
-                if dominanceCheck(solution ,wVector.neighbors[i].solution):
-                    wVector.solution = solution
-                    break
-                i += 1 
-
-
-def MOEA_D(pop,wVectors , numIteration, numNeighbors,CR,MR):
+def MOEA_D(pop,wVectors , numIteration, numNeighbors,CR,MR,objLowerBounds,objUBounds):
 
     wVectors = np.array(wVectors)
     pop = np.array(pop)
@@ -164,57 +147,65 @@ def MOEA_D(pop,wVectors , numIteration, numNeighbors,CR,MR):
         popValue.append(objFunction(pop[i]))
         i += 1
     popValue = np.array(popValue)
-    EP = nonDomnanceSet(popValue)
-    idealpoint = findIdealPoint(EP)
+    idealpoint = findIdealPoint(popValue)
     i = 0
     while i < len(wVectors):
-        arrWVectors.append(wVectorn(wVectors[i],popValue[i],PBI(wVectors[i],idealpoint,popValue[i],0.7)))
+        arrWVectors.append(wVectorn(wVectors[i],popValue[i],PBI(wVectors[i],idealpoint,popValue[i],0.7),pop[i]))
         i += 1
 
+
+    EP = nonDomnanceSet(popValue,pop)
     findneighbors(arrWVectors,numNeighbors)
 
     i = 0  
     while i < numIteration:
         j = 0 
         while j < len(pop):
-            n = np.random.randint(0 ,numNeighbors - 1)
-            m = np.random.randint(0 ,numNeighbors  - 1)
+            n = np.random.randint(0 ,numNeighbors)
+            m = np.random.randint(0 ,numNeighbors)
             prob = np.random.rand()
             if prob < CR :
-                newSolution = objFunction(arithmeticCrossover(arrWVectors[j].neighbors[n].solution,arrWVectors[j].neighbors[m].solution))
+                newSolutionDV = arithmeticCrossover(arrWVectors[j].neighbors[n].decietionValue,arrWVectors[j].neighbors[m].decietionValue)
+            else:
+                newSolutionDV = arrWVectors[j].neighbors[n].decietionValue.copy()
+
+            newSolutionDV = mutation(newSolutionDV,objLowerBounds,objUBounds,MR)
+
+            newSolution = objFunction(newSolutionDV)
+            k = 0 
+            while k < len(idealpoint):
+                if idealpoint [k] < newSolution[k]:
+                    idealpoint[k] = newSolution[k]
+                k += 1
+            k = 0 
+            while k < numNeighbors:
+                PBVs = PBI(arrWVectors[j].neighbors[k].wVector1,idealpoint,newSolution,0.7)
+                if PBVs < arrWVectors[j].neighbors[k].PBIS:
+                    arrWVectors[j].neighbors[k].PBIS = PBVs
+                    arrWVectors[j].neighbors[k].solution = newSolution
+                    arrWVectors[j].neighbors[k].decietionValue = newSolutionDV
+                    break
+                k += 1
+            
+            k = 0 
+            dominated = False
+            while k < len(EP) : 
+                if dominanceCheck(newSolution,EP[k][1]):
+                    EP.pop(k)
+                    continue
+                if dominanceCheck(EP[k][1] , newSolution):
+                    dominated = True
+                k += 1
                 
-                k = 0 
-                while k < len(idealpoint):
-                    if idealpoint [k] < newSolution[k]:
-                        idealpoint[k] = newSolution[k]
+            if  dominated != True:
+                li = [newSolutionDV,newSolution]         
+                EP.append(li)
 
-                    k += 1
-
-
-                k = 0 
-                while k < numNeighbors:
-                    PBVs = PBI(arrWVectors[j].neighbors[k].wVector1,idealpoint,newSolution,0.7)
-                    if PBVs < arrWVectors[j].neighbors[k].PBIS:
-                        arrWVectors[j].neighbors[k].PBIS = PBVs
-                        arrWVectors[j].neighbors[k].solution = newSolution
-                        break
-
-                k = 0 
-                dom = 0
-                while k < len(EP):
-                    if dominanceCheck(newSolution,EP[k]):
-                        EP.pop(k)
-                    if dominanceCheck(EP[k] , newSolution):
-                        dom += 1
-                    k += 1
-
-                if  dom == 0:
-                    EP.append(newSolution)
-
+        
             j += 1
 
         i += 1
-
+    return EP
                     
 
 
